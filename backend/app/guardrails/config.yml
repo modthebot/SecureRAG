@@ -1,0 +1,55 @@
+# NeMo Guardrails Configuration for SecureRAG
+
+# LLM Configuration
+# Note: We'll use a custom adapter to connect to Ollama
+models:
+  - type: main
+    engine: custom
+    model: ollama-llm
+
+# Instructions for the LLM
+instructions:
+  - type: general
+    content: |
+      You are a specialized assistant for reviewing system architecture and security 
+      documents for penetration testing. Always use the provided context and cite sources.
+
+# Sample conversations for few-shot learning
+# Note: NeMo Guardrails may not use this format - keeping for reference
+# sample_conversations:
+#   - - user: "What technologies are used in the system?"
+#       bot: "Based on the provided context, the system uses [technologies]. Sources: [documents]"
+
+# Active guardrails
+rails:
+  config:
+    # Input rails - validate user input
+    input:
+      flows:
+        - self check input
+        - check jailbreak attempt
+        - check malicious content
+        - validate query relevance
+    
+    # Output rails - validate LLM output
+    output:
+      flows:
+        - self check output
+        - check response quality
+        - ensure source citations
+        - validate response length
+    
+    # Dialog rails - control conversation flow
+    dialog:
+      flows:
+        - rag query flow
+        - handle no context
+        - handle off-topic query
+
+# Custom parameters
+parameters:
+  check_input: true
+  check_output: true
+  temperature: 0.7
+  max_tokens: 2000
+

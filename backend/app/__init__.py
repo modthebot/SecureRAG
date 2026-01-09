@@ -1,0 +1,2 @@
+"""SecureRAG backend application."""
+

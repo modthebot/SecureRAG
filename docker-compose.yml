@@ -1,0 +1,77 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: securerag-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-OLLAMA}
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama2}
+      - OLLAMA_AGENT_MODEL=${OLLAMA_AGENT_MODEL:-qwen2.5:14b-instruct}
+      - VECTOR_STORE=${VECTOR_STORE:-CHROMA}
+      - CHROMA_DB_PATH=${CHROMA_DB_PATH:-./data/chroma}
+      - MAX_CHUNK_TOKENS=${MAX_CHUNK_TOKENS:-700}
+      - CHUNK_OVERLAP_TOKENS=${CHUNK_OVERLAP_TOKENS:-100}
+      - TOP_K=${TOP_K:-5}
+      - DATA_DIR=${DATA_DIR:-./data}
+      - RAW_DOCS_DIR=${RAW_DOCS_DIR:-./data/raw}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - GUARDRAILS_ENABLED=${GUARDRAILS_ENABLED:-true}
+      - GUARDRAILS_CONFIG_PATH=${GUARDRAILS_CONFIG_PATH:-./app/guardrails}
+      - GUARDRAILS_MODE=${GUARDRAILS_MODE:-strict}
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app
+      # Persistent volumes for new features
+      - projects-db:/app/data/projects
+      - mindmaps-data:/app/data/mindmaps
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    depends_on:
+      - frontend
+    networks:
+      - securerag-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: securerag-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm start
+    networks:
+      - securerag-network
+
+  # NOTE: Ollama is NOT containerized by default.
+  # You must install and run Ollama locally on your host machine.
+  # 
+  # To use Ollama in Docker (advanced):
+  # 1. Uncomment the ollama service below
+  # 2. Update OLLAMA_HOST in .env to: http://ollama:11434
+  # 3. Pull a model: docker exec -it securerag-ollama ollama pull llama2
+  #
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: securerag-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+  #   networks:
+  #     - securerag-network
+
+networks:
+  securerag-network:
+    driver: bridge
+
+volumes:
+  projects-db:
+  mindmaps-data:
+  # ollama-data:  # Uncomment if using Ollama in Docker
